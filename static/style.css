@@ -1,0 +1,54 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background: #ffffff;
+}
+
+#app {
+    width: 60%;
+    margin: 40px auto;
+}
+
+h1 {
+    text-align: center;
+}
+
+#chat {
+    border: 2px solid #000;
+    height: 400px;
+    padding: 10px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+}
+
+.user {
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.haste {
+    margin-left: 10px;
+    margin-bottom: 10px;
+}
+
+#input-area {
+    display: flex;
+    gap: 10px;
+}
+
+#user-input {
+    flex: 1;
+    padding: 10px;
+    font-size: 16px;
+}
+
+button {
+    padding: 10px 20px;
+    cursor: pointer;
+}
+
+#thinking {
+    margin-top: 10px;
+    font-style: italic;
+}
