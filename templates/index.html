@@ -7,9 +7,6 @@
 </head>
 <body>
 
-<!-- ✅ Student Mode Badge (NON-INTRUSIVE) -->
-<div id="student-badge">🎓 Student Mode</div>
-
 <div id="app">
     <h1>Haste</h1>
 
@@ -23,9 +20,13 @@
     <div id="thinking" style="display:none;">Haste is thinking...</div>
 </div>
 
-<!-- ✅ Message Counter (Corner only) -->
-<div id="message-counter">0 messages</div>
+<button id="student-toggle" onclick="toggleStudentMode()">
+    🎓 Student Mode: ON
+</button>
+
+<div id="message-counter">💬 0</div>
 
 <script src="/static/script.js"></script>
 </body>
 </html>
+
