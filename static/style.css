@@ -5,6 +5,9 @@ body {
     background: #ffffff;
 }
 
+/* =========================
+   DESKTOP (DEFAULT)
+========================= */
 #app {
     width: 60%;
     margin: 40px auto;
@@ -53,7 +56,9 @@ button {
     font-style: italic;
 }
 
-/* 🔒 Existing badge untouched */
+/* =========================
+   FIXED UI ELEMENTS
+========================= */
 #student-badge {
     position: fixed;
     top: 10px;
@@ -67,22 +72,57 @@ button {
     z-index: 1000;
 }
 
-/* 🔥 MESSAGE COUNTER — MADE BIG & CLEAR */
 #message-counter {
     position: fixed;
     bottom: 15px;
     right: 15px;
-
     background: #000;
     color: #fff;
-
-    font-size: 18px;        /* ⬅️ BIGGER */
-    font-weight: bold;      /* ⬅️ CLEAR */
-    padding: 10px 14px;     /* ⬅️ EASY TO SEE */
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px 14px;
     border-radius: 999px;
-
     opacity: 0.9;
     z-index: 1000;
-
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+/* =========================
+   📱 MOBILE OPTIMIZATION
+========================= */
+@media (max-width: 768px) {
+
+    #app {
+        width: 95%;              /* FULL WIDTH */
+        margin: 15px auto;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+
+    #chat {
+        height: 60vh;            /* DYNAMIC HEIGHT */
+        font-size: 15px;
+    }
+
+    #user-input {
+        font-size: 16px;         /* NO ZOOM ON TAP */
+        padding: 12px;
+    }
+
+    button {
+        padding: 12px 16px;
+        font-size: 15px;
+    }
+
+    #student-badge {
+        font-size: 11px;
+        padding: 5px 9px;
+    }
+
+    #message-counter {
+        font-size: 16px;
+        padding: 9px 12px;
+    }
 }
