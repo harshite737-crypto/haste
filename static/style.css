@@ -86,12 +86,12 @@ button {
 }
 
 /* ======================================================
-   📱 MOBILE UI — CHATGPT-STYLE (ONLY MOBILE CHANGES)
+   📱 MOBILE UI — CLEAN & PROFESSIONAL (CHATGPT STYLE)
 ====================================================== */
 @media (max-width: 768px) {
 
     body {
-        background: #f7f7f8; /* ChatGPT light background */
+        background: #f7f7f8;
     }
 
     #app {
@@ -102,10 +102,10 @@ button {
 
     h1 {
         margin: 0;
-        padding: 14px;
-        font-size: 20px;
-        border-bottom: 1px solid #e5e5e5;
+        padding: 12px;
+        font-size: 18px;
         background: #ffffff;
+        border-bottom: 1px solid #e5e5e5;
         position: sticky;
         top: 0;
         z-index: 10;
@@ -113,7 +113,7 @@ button {
 
     #chat {
         border: none;
-        height: calc(100vh - 140px);
+        height: calc(100vh - 120px); /* ⬅️ MORE CHAT SPACE */
         padding: 12px;
         background: #f7f7f8;
     }
@@ -122,19 +122,18 @@ button {
     .user,
     .haste {
         font-weight: normal;
-        margin: 0 0 12px 0;
-        padding: 12px 14px;
+        margin-bottom: 10px;
+        padding: 10px 12px;
         border-radius: 14px;
         max-width: 85%;
-        line-height: 1.4;
         font-size: 15px;
+        line-height: 1.4;
         word-wrap: break-word;
     }
 
     .user {
-        background: #dcfce7; /* light green */
+        background: #dcfce7;
         margin-left: auto;
-        text-align: left;
     }
 
     .haste {
@@ -143,50 +142,55 @@ button {
         margin-right: auto;
     }
 
-    /* Input bar (ChatGPT style) */
+    /* 🔽 INPUT AREA — REDUCED HEIGHT */
     #input-area {
         position: fixed;
         bottom: 0;
         left: 0;
         width: 100%;
-        padding: 10px;
+        padding: 8px;                 /* ⬅️ SMALLER */
         background: #ffffff;
         border-top: 1px solid #e5e5e5;
-        gap: 8px;
+        gap: 6px;
     }
 
     #user-input {
-        font-size: 16px;
-        padding: 12px;
-        border-radius: 12px;
+        font-size: 15px;
+        padding: 10px;                /* ⬅️ SMALLER */
+        border-radius: 10px;
         border: 1px solid #ccc;
     }
 
     button {
-        padding: 12px 16px;
+        padding: 10px 14px;           /* ⬅️ SMALLER */
         font-size: 14px;
-        border-radius: 12px;
+        border-radius: 10px;
         border: none;
         background: #000;
         color: #fff;
     }
 
     #thinking {
-        padding: 10px;
+        padding: 8px;
         font-size: 13px;
         color: #555;
     }
 
-    /* Smaller floating elements */
+    /* 🎓 STUDENT TOGGLE — FIX VISIBILITY */
     #student-toggle {
         top: 8px;
         right: 8px;
         font-size: 11px;
-        padding: 5px 9px;
+        padding: 6px 10px;
+        background: #000;             /* ⬅️ HIGH CONTRAST */
+        color: #fff;                  /* ⬅️ VISIBLE */
+        border: none;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
     }
 
+    /* Message counter */
     #message-counter {
-        bottom: 80px;
+        bottom: 70px;
         right: 12px;
         font-size: 14px;
         padding: 8px 12px;
