@@ -1,51 +1,104 @@
-const chat = document.getElementById("chat");
-const input = document.getElementById("user-input");
-const thinking = document.getElementById("thinking");
-const counter = document.getElementById("message-counter");
+from flask import Flask, render_template, request, jsonify, make_response
+from groq import Groq
+from openai import OpenAI
+import re
+import uuid
+import os
 
-let messageCount = 0;
+app = Flask(__name__)
 
-function addMessage(sender, text) {
-    const div = document.createElement("div");
-    div.className = sender;
-    div.innerText = sender.toUpperCase() + ": " + text;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
+groq_client = Groq(api_key=os.getenv("YOUR_GROQ_API_KEY"))
+openai_client = OpenAI(api_key=os.getenv("YOUR_OpenAI_API_KEY"))
 
-    // Count only user messages
-    if (sender === "user") {
-        messageCount++;
-        counter.innerText = messageCount + " messages";
-    }
-}
+user_memory = {}
 
-function sendMessage() {
-    const message = input.value.trim();
-    if (!message) return;
+IMPORTANT_PATTERNS = [
+    r"my name is",
+    r"remember",
+    r"i like",
+    r"i am",
+    r"call me",
+    r"my age is",
+    r"i live in"
+]
 
-    addMessage("user", message);
-    input.value = "";
+def is_important(text):
+    return any(re.search(p, text.lower()) for p in IMPORTANT_PATTERNS)
 
-    thinking.style.display = "block";
+def memory_context(user_id):
+    if user_id not in user_memory:
+        return ""
+    return "Important user info:\n" + "\n".join(f"- {m}" for m in user_memory[user_id])
 
-    fetch("/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message })
-    })
-    .then(res => res.json())
-    .then(data => {
-        thinking.style.display = "none";
-        addMessage("haste", data.reply);
-    })
-    .catch(() => {
-        thinking.style.display = "none";
-        addMessage("haste", "Connection error.");
-    });
-}
+def get_user_id():
+    uid = request.cookies.get("haste_uid")
+    if not uid:
+        uid = str(uuid.uuid4())
+    return uid
 
-input.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") {
-        sendMessage();
-    }
-});
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    user_id = get_user_id()
+    data = request.json
+    user_input = data.get("message", "").strip()
+    student_mode = data.get("student_mode", True)
+
+    if not user_input:
+        return jsonify({"reply": "Say something."})
+
+    if is_important(user_input):
+        user_memory.setdefault(user_id, []).append(user_input)
+
+    if student_mode:
+        system_prompt = (
+            "You are Haste, a friendly AI tutor for students.\n"
+            "Explain step-by-step.\n"
+            "Use Hinglish only if helpful.\n"
+            f"{memory_context(user_id)}"
+        )
+    else:
+        system_prompt = (
+            "You are Haste, a professional AI assistant.\n"
+            "Reply in fluent English.\n"
+            f"{memory_context(user_id)}"
+        )
+
+    try:
+        completion = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_input}
+            ],
+            temperature=0.5,
+            max_tokens=400
+        )
+
+        reply = completion.choices[0].message.content
+        response = make_response(jsonify({"reply": reply}))
+        response.set_cookie("haste_uid", user_id, max_age=31536000)
+        return response
+
+    except Exception:
+        completion = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_input}
+            ],
+            temperature=0.5,
+            max_tokens=400
+        )
+
+        reply = completion.choices[0].message.content
+        response = make_response(jsonify({"reply": reply}))
+        response.set_cookie("haste_uid", user_id, max_age=31536000)
+        return response
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
