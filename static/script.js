@@ -1,6 +1,9 @@
 const chat = document.getElementById("chat");
 const input = document.getElementById("user-input");
 const thinking = document.getElementById("thinking");
+const counter = document.getElementById("message-counter");
+
+let messageCount = 0;
 
 function addMessage(sender, text) {
     const div = document.createElement("div");
@@ -8,6 +11,12 @@ function addMessage(sender, text) {
     div.innerText = sender.toUpperCase() + ": " + text;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
+
+    // Count only user messages
+    if (sender === "user") {
+        messageCount++;
+        counter.innerText = messageCount + " messages";
+    }
 }
 
 function sendMessage() {
