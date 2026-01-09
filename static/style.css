@@ -1,5 +1,5 @@
 /* =========================
-   BASE (DESKTOP — UNCHANGED)
+   DESKTOP (UNCHANGED)
 ========================= */
 body {
     margin: 0;
@@ -57,28 +57,28 @@ button {
 }
 
 /* =========================
-   FIXED ELEMENTS
+   FIXED UI
 ========================= */
 #student-toggle {
     position: fixed;
     top: 10px;
     right: 12px;
-    background: #f1f1f1;
-    border: 1px solid #ddd;
-    border-radius: 20px;
+    background: #000;
+    color: #fff;
+    border-radius: 999px;
     font-size: 12px;
-    padding: 6px 10px;
+    padding: 6px 12px;
     cursor: pointer;
     z-index: 1000;
 }
 
 #message-counter {
     position: fixed;
-    bottom: 15px;
-    right: 15px;
+    bottom: 90px;
+    right: 16px;
     background: #000;
     color: #fff;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     padding: 10px 14px;
     border-radius: 999px;
@@ -86,7 +86,7 @@ button {
 }
 
 /* ======================================================
-   📱 MOBILE UI — CLEAN & PROFESSIONAL (CHATGPT STYLE)
+   📱 MOBILE — CHATGPT-LIKE UI
 ====================================================== */
 @media (max-width: 768px) {
 
@@ -97,38 +97,31 @@ button {
     #app {
         width: 100%;
         margin: 0;
-        padding: 0;
     }
 
     h1 {
-        margin: 0;
-        padding: 12px;
+        padding: 14px;
         font-size: 18px;
         background: #ffffff;
         border-bottom: 1px solid #e5e5e5;
-        position: sticky;
-        top: 0;
-        z-index: 10;
     }
 
     #chat {
         border: none;
-        height: calc(100vh - 120px); /* ⬅️ MORE CHAT SPACE */
-        padding: 12px;
+        height: calc(100vh - 140px);
+        padding: 14px;
         background: #f7f7f8;
     }
 
-    /* Chat bubbles */
     .user,
     .haste {
         font-weight: normal;
-        margin-bottom: 10px;
-        padding: 10px 12px;
-        border-radius: 14px;
-        max-width: 85%;
+        margin-bottom: 12px;
+        padding: 12px 14px;
+        border-radius: 18px;
+        max-width: 78%;
         font-size: 15px;
-        line-height: 1.4;
-        word-wrap: break-word;
+        line-height: 1.5;
     }
 
     .user {
@@ -142,57 +135,41 @@ button {
         margin-right: auto;
     }
 
-    /* 🔽 INPUT AREA — REDUCED HEIGHT */
+    /* 🔥 CHATGPT-STYLE INPUT BAR */
     #input-area {
         position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        padding: 8px;                 /* ⬅️ SMALLER */
+        bottom: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 86%;                 /* ⬅️ NARROW */
+        max-width: 520px;
+        padding: 8px;
         background: #ffffff;
-        border-top: 1px solid #e5e5e5;
+        border: 1px solid #e5e5e5;
+        border-radius: 999px;       /* ⬅️ PILL */
+        display: flex;
+        align-items: center;
         gap: 6px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     }
 
     #user-input {
+        border: none;
+        outline: none;
         font-size: 15px;
-        padding: 10px;                /* ⬅️ SMALLER */
-        border-radius: 10px;
-        border: 1px solid #ccc;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: transparent;
     }
 
+    /* 🔥 SMALL ROUND SEND BUTTON */
     button {
-        padding: 10px 14px;           /* ⬅️ SMALLER */
+        padding: 8px 14px;
         font-size: 14px;
-        border-radius: 10px;
+        border-radius: 999px;
         border: none;
         background: #000;
         color: #fff;
-    }
-
-    #thinking {
-        padding: 8px;
-        font-size: 13px;
-        color: #555;
-    }
-
-    /* 🎓 STUDENT TOGGLE — FIX VISIBILITY */
-    #student-toggle {
-        top: 8px;
-        right: 8px;
-        font-size: 11px;
-        padding: 6px 10px;
-        background: #000;             /* ⬅️ HIGH CONTRAST */
-        color: #fff;                  /* ⬅️ VISIBLE */
-        border: none;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-    }
-
-    /* Message counter */
-    #message-counter {
-        bottom: 70px;
-        right: 12px;
-        font-size: 14px;
-        padding: 8px 12px;
+        white-space: nowrap;
     }
 }
