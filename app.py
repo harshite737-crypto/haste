@@ -1,24 +1,22 @@
-﻿from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
 from groq import Groq
 from openai import OpenAI
-import time
 import re
+import uuid
+import os
 
 app = Flask(__name__)
 
 # =========================
-# 🔑 API KEYS (ADD YOURS)
+# 🔑 API KEYS (ENV VARS)
 # =========================
-import os
-
 groq_client = Groq(api_key=os.getenv("YOUR_GROQ_API_KEY"))
 openai_client = OpenAI(api_key=os.getenv("YOUR_OpenAI_API_KEY"))
 
-
 # =========================
-# 🧠 MEMORY (IMPORTANT ONLY)
+# 🧠 PER-USER MEMORY (SAFE)
 # =========================
-memory = []
+user_memory = {}
 
 IMPORTANT_PATTERNS = [
     r"my name is",
@@ -34,10 +32,22 @@ def is_important(text):
     text = text.lower()
     return any(re.search(p, text) for p in IMPORTANT_PATTERNS)
 
-def memory_context():
-    if not memory:
+def memory_context(user_id):
+    if user_id not in user_memory or not user_memory[user_id]:
         return ""
-    return "Important user info:\n" + "\n".join(f"- {m}" for m in memory)
+    return (
+        "Important user info:\n"
+        + "\n".join(f"- {m}" for m in user_memory[user_id])
+    )
+
+# =========================
+# 👤 USER IDENTIFICATION
+# =========================
+def get_user_id():
+    user_id = request.cookies.get("haste_uid")
+    if not user_id:
+        user_id = str(uuid.uuid4())
+    return user_id
 
 # =========================
 # 🌐 ROUTES
@@ -48,18 +58,30 @@ def index():
 
 @app.route("/chat", methods=["POST"])
 def chat():
+    user_id = get_user_id()
     user_input = request.json.get("message", "").strip()
+
     if not user_input:
         return jsonify({"reply": "Say something."})
 
-    # Store important memory
+    # Store important memory PER USER
     if is_important(user_input):
-        memory.append(user_input)
+        if user_id not in user_memory:
+            user_memory[user_id] = []
+        user_memory[user_id].append(user_input)
 
+    # =========================
+    # 🎓 STUDENT MODE PROMPT
+    # =========================
     system_prompt = (
-        "You are Haste, a fast, precise AI assistant.\n"
-        "Respond clearly and concisely.\n"
-        f"{memory_context()}"
+        "You are Haste, an AI tutor made especially for students.\n"
+        "Explain concepts in simple language.\n"
+        "Give step-by-step answers.\n"
+        "Focus on exam-ready explanations.\n"
+        "Use examples when helpful.\n"
+        "If the question is academic, answer like a teacher.\n"
+        "You may use simple Hinglish if it helps understanding.\n"
+        f"{memory_context(user_id)}"
     )
 
     # -------------------------
@@ -75,8 +97,12 @@ def chat():
             temperature=0.5,
             max_tokens=400
         )
+
         reply = completion.choices[0].message.content
-        return jsonify({"reply": reply})
+
+        response = make_response(jsonify({"reply": reply}))
+        response.set_cookie("haste_uid", user_id, max_age=60 * 60 * 24 * 365)
+        return response
 
     except Exception as groq_error:
         print("Groq failed:", groq_error)
@@ -94,8 +120,12 @@ def chat():
             temperature=0.5,
             max_tokens=400
         )
+
         reply = completion.choices[0].message.content
-        return jsonify({"reply": reply})
+
+        response = make_response(jsonify({"reply": reply}))
+        response.set_cookie("haste_uid", user_id, max_age=60 * 60 * 24 * 365)
+        return response
 
     except Exception as openai_error:
         print("OpenAI failed:", openai_error)
@@ -107,8 +137,5 @@ def chat():
 # ▶️ RUN SERVER
 # =========================
 if __name__ == "__main__":
-   import os
-
-port = int(os.environ.get("PORT", 5000))
-app.run(host="0.0.0.0", port=port)
-
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
