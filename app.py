@@ -7,15 +7,9 @@ import os
 
 app = Flask(__name__)
 
-# =========================
-# 🔑 API KEYS (ENV VARS)
-# =========================
 groq_client = Groq(api_key=os.getenv("YOUR_GROQ_API_KEY"))
 openai_client = OpenAI(api_key=os.getenv("YOUR_OpenAI_API_KEY"))
 
-# =========================
-# 🧠 PER-USER MEMORY (SAFE)
-# =========================
 user_memory = {}
 
 IMPORTANT_PATTERNS = [
@@ -29,29 +23,19 @@ IMPORTANT_PATTERNS = [
 ]
 
 def is_important(text):
-    text = text.lower()
-    return any(re.search(p, text) for p in IMPORTANT_PATTERNS)
+    return any(re.search(p, text.lower()) for p in IMPORTANT_PATTERNS)
 
 def memory_context(user_id):
-    if user_id not in user_memory or not user_memory[user_id]:
+    if user_id not in user_memory:
         return ""
-    return (
-        "Important user info:\n"
-        + "\n".join(f"- {m}" for m in user_memory[user_id])
-    )
+    return "Important user info:\n" + "\n".join(f"- {m}" for m in user_memory[user_id])
 
-# =========================
-# 👤 USER IDENTIFICATION
-# =========================
 def get_user_id():
-    user_id = request.cookies.get("haste_uid")
-    if not user_id:
-        user_id = str(uuid.uuid4())
-    return user_id
+    uid = request.cookies.get("haste_uid")
+    if not uid:
+        uid = str(uuid.uuid4())
+    return uid
 
-# =========================
-# 🌐 ROUTES
-# =========================
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -59,34 +43,30 @@ def index():
 @app.route("/chat", methods=["POST"])
 def chat():
     user_id = get_user_id()
-    user_input = request.json.get("message", "").strip()
+    data = request.json
+    user_input = data.get("message", "").strip()
+    student_mode = data.get("student_mode", True)
 
     if not user_input:
         return jsonify({"reply": "Say something."})
 
-    # Store important memory PER USER
     if is_important(user_input):
-        if user_id not in user_memory:
-            user_memory[user_id] = []
-        user_memory[user_id].append(user_input)
+        user_memory.setdefault(user_id, []).append(user_input)
 
-    # =========================
-    # 🎓 STUDENT MODE PROMPT
-    # =========================
-    system_prompt = (
-        "You are Haste, an AI tutor made especially for students.\n"
-        "Explain concepts in simple language.\n"
-        "Give step-by-step answers.\n"
-        "Focus on exam-ready explanations.\n"
-        "Use examples when helpful.\n"
-        "If the question is academic, answer like a teacher.\n"
-        "You may use simple Hinglish if it helps understanding.\n"
-        f"{memory_context(user_id)}"
-    )
+    if student_mode:
+        system_prompt = (
+            "You are Haste, a friendly AI tutor for students.\n"
+            "Explain step-by-step.\n"
+            "Use Hinglish only if helpful.\n"
+            f"{memory_context(user_id)}"
+        )
+    else:
+        system_prompt = (
+            "You are Haste, a professional AI assistant.\n"
+            "Reply in fluent English.\n"
+            f"{memory_context(user_id)}"
+        )
 
-    # -------------------------
-    # 🚀 TRY GROQ FIRST
-    # -------------------------
     try:
         completion = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -99,18 +79,11 @@ def chat():
         )
 
         reply = completion.choices[0].message.content
-
         response = make_response(jsonify({"reply": reply}))
-        response.set_cookie("haste_uid", user_id, max_age=60 * 60 * 24 * 365)
+        response.set_cookie("haste_uid", user_id, max_age=31536000)
         return response
 
-    except Exception as groq_error:
-        print("Groq failed:", groq_error)
-
-    # -------------------------
-    # 🔁 FALLBACK TO OPENAI
-    # -------------------------
-    try:
+    except Exception:
         completion = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -122,20 +95,11 @@ def chat():
         )
 
         reply = completion.choices[0].message.content
-
         response = make_response(jsonify({"reply": reply}))
-        response.set_cookie("haste_uid", user_id, max_age=60 * 60 * 24 * 365)
+        response.set_cookie("haste_uid", user_id, max_age=31536000)
         return response
 
-    except Exception as openai_error:
-        print("OpenAI failed:", openai_error)
-        return jsonify({
-            "reply": "Neural link failed. Both engines are unavailable."
-        })
-
-# =========================
-# ▶️ RUN SERVER
-# =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
