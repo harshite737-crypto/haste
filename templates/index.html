@@ -1,36 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Haste</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<div id="menu-btn" onclick="toggleMenu()">☰</div>
+<!-- SIDEBAR -->
+<aside class="sidebar desktop">
+    <div class="sidebar-top">
+        <h2>Haste</h2>
+        <button class="new-chat">+ New chat</button>
+    </div>
 
-<div id="side-menu" class="desktop-open">
-    <button onclick="toggleStudentMode()">🎓 Student Mode</button>
-    <button>🔐 Login</button>
-
-    <div class="menu-footer">
+    <div class="sidebar-bottom">
+        <button class="sidebar-btn">Login</button>
+        <button class="sidebar-btn" onclick="toggleStudentMode()">Student mode</button>
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
         <a href="/contact">Contact</a>
     </div>
-</div>
+</aside>
 
-<div id="app">
-    <h1>Haste</h1>
+<!-- MAIN CHAT AREA -->
+<main class="main">
+    <div id="chat" class="chat"></div>
 
-    <div id="chat"></div>
-
-    <div id="input-area">
-        <input id="user-input" placeholder="Ask Haste..." />
-        <button onclick="sendMessage()">Send</button>
+    <!-- INPUT BAR -->
+    <div class="input-wrapper">
+        <input
+            type="text"
+            id="user-input"
+            placeholder="Message Haste…"
+            autocomplete="off"
+        />
+        <button onclick="sendMessage()">➤</button>
     </div>
 
-    <div id="thinking" style="display:none;">Thinking...</div>
-</div>
+    <div id="thinking" class="thinking" style="display:none;">
+        Haste is thinking…
+    </div>
+</main>
 
 <script src="/static/script.js"></script>
 </body>
