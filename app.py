@@ -36,7 +36,7 @@ def index():
 def chat():
     data = request.json
     user_input = data.get("message", "")
-    student_mode = data.get("studentMode", True)
+    student_mode = data.get("studentMode", False)  # OFF by default
 
     if "memory" not in session:
         session["memory"] = []
@@ -52,7 +52,7 @@ def chat():
     )
 
     system_prompt = (
-        "You are Haste, a helpful AI.\n"
+        "You are Haste, a helpful AI assistant.\n"
         f"{tone}\n"
         f"{memory_context()}"
     )
