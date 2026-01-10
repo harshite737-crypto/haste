@@ -1,49 +1,43 @@
-let studentMode = false; // OFF by default
+let studentMode = false;
 
 const chat = document.getElementById("chat");
 const input = document.getElementById("user-input");
 const thinking = document.getElementById("thinking");
-const menu = document.getElementById("side-menu");
-
-function toggleMenu() {
-    if (window.innerWidth <= 768) {
-        menu.classList.toggle("open");
-    }
-}
 
 function toggleStudentMode() {
     studentMode = !studentMode;
     alert("Student Mode: " + (studentMode ? "ON" : "OFF"));
 }
 
-function addMessage(sender, text) {
+function addMessage(type, text) {
     const div = document.createElement("div");
-    div.className = sender;
-    div.innerText = text;
+    div.className = type === "user" ? "message-user" : "message-ai";
+    div.textContent = text;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
 }
 
 function sendMessage() {
-    const msg = input.value.trim();
-    if (!msg) return;
+    const message = input.value.trim();
+    if (!message) return;
 
-    addMessage("user", msg);
+    addMessage("user", message);
     input.value = "";
     thinking.style.display = "block";
 
     fetch("/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            message: msg,
-            studentMode: studentMode
-        })
+        body: JSON.stringify({ message, studentMode })
     })
     .then(res => res.json())
     .then(data => {
         thinking.style.display = "none";
-        addMessage("haste", data.reply);
+        addMessage("ai", data.reply);
+    })
+    .catch(() => {
+        thinking.style.display = "none";
+        addMessage("ai", "Something went wrong.");
     });
 }
 
