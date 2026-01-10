@@ -1,44 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
     <title>Haste</title>
-
-    <!-- IMPORTANT FOR MOBILE -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
+<div id="menu-btn" onclick="toggleMenu()">☰</div>
+
+<div id="side-menu">
+    <button onclick="toggleStudentMode()">🎓 Student Mode</button>
+    <button>🔐 Login</button>
+
+    <div class="menu-footer">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/contact">Contact</a>
+    </div>
+</div>
+
 <div id="app">
     <h1>Haste</h1>
-
     <div id="chat"></div>
 
     <div id="input-area">
-        <input
-            type="text"
-            id="user-input"
-            placeholder="Type here..."
-            autocomplete="off"
-        >
+        <input id="user-input" placeholder="Ask Haste..." />
         <button onclick="sendMessage()">Send</button>
     </div>
 
-    <div id="thinking" style="display:none;">Haste is thinking...</div>
+    <div id="thinking" style="display:none;">Thinking...</div>
 </div>
 
-<!-- STUDENT MODE TOGGLE (CORNER ONLY) -->
-<button id="student-toggle" onclick="toggleStudentMode()">
-    🎓 Student Mode: ON
-</button>
-
-<!-- MESSAGE COUNTER -->
-<div id="message-counter">💬 0</div>
-
-<!-- SCRIPT MUST LOAD LAST -->
 <script src="/static/script.js"></script>
-
 </body>
 </html>
