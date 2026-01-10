@@ -3,7 +3,9 @@ body {
     font-family: Arial, sans-serif;
 }
 
-/* MENU BUTTON */
+/* =========================
+   MENU BUTTON
+========================= */
 #menu-btn {
     position: fixed;
     top: 12px;
@@ -13,14 +15,16 @@ body {
     z-index: 1001;
 }
 
-/* SIDE MENU */
+/* =========================
+   SIDE MENU
+========================= */
 #side-menu {
     position: fixed;
     top: 0;
     left: -260px;
     width: 260px;
     height: 100%;
-    background: #fff;
+    background: #ffffff;
     border-right: 1px solid #ddd;
     padding: 20px;
     transition: 0.3s;
@@ -31,21 +35,11 @@ body {
     left: 0;
 }
 
-/* DESKTOP: MENU ALWAYS OPEN */
-@media (min-width: 769px) {
-    #side-menu {
-        left: 0;
-    }
-
-    #menu-btn {
-        display: none;
-    }
-}
-
 #side-menu button {
     width: 100%;
     padding: 10px;
     margin-bottom: 10px;
+    cursor: pointer;
 }
 
 .menu-footer {
@@ -57,14 +51,21 @@ body {
     display: block;
     margin-top: 10px;
     text-decoration: none;
+    color: #000;
 }
 
-/* APP */
+/* =========================
+   APP (DESKTOP FIX)
+========================= */
 #app {
-    width: 60%;
+    width: calc(60% - 260px);   /* ⬅️ ACCOUNT FOR MENU */
     margin: 40px auto;
+    margin-left: 260px;        /* ⬅️ PUSH CONTENT RIGHT */
 }
 
+/* =========================
+   CHAT AREA
+========================= */
 #chat {
     height: 400px;
     border: 1px solid #000;
@@ -74,28 +75,61 @@ body {
 
 .user {
     font-weight: bold;
+    margin-top: 10px;
 }
 
 .haste {
     margin-left: 10px;
+    margin-bottom: 10px;
 }
 
+/* =========================
+   INPUT AREA
+========================= */
 #input-area {
     display: flex;
     gap: 10px;
     margin-top: 10px;
 }
 
-/* MOBILE */
+#user-input {
+    flex: 1;
+    padding: 10px;
+    font-size: 16px;
+}
+
+button {
+    padding: 10px 20px;
+}
+
+/* =========================
+   MOBILE OVERRIDES
+========================= */
 @media (max-width: 768px) {
+
+    /* Menu hidden by default on mobile */
+    #side-menu {
+        left: -260px;
+    }
+
+    #side-menu.open {
+        left: 0;
+    }
+
+    #menu-btn {
+        display: block;
+    }
+
+    /* App should NOT be shifted on mobile */
     #app {
         width: 100%;
         margin: 0;
         padding-top: 50px;
+        margin-left: 0;
     }
 
     #chat {
         height: calc(100vh - 160px);
-        padding-bottom: 120px;
+        padding-bottom: 120px; /* prevent overlap with input */
     }
 }
