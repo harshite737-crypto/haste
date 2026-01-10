@@ -1,16 +1,13 @@
-from flask import Flask, render_template, request, jsonify, make_response
+from flask import Flask, render_template, request, jsonify, session
 from groq import Groq
 from openai import OpenAI
-import re
-import uuid
-import os
+import os, re
 
 app = Flask(__name__)
+app.secret_key = "haste-secret-key"
 
 groq_client = Groq(api_key=os.getenv("YOUR_GROQ_API_KEY"))
-openai_client = OpenAI(api_key=os.getenv("YOUR_OpenAI_API_KEY"))
-
-user_memory = {}
+openai_client = OpenAI(api_key=os.getenv("YOUR_OPENAI_API_KEY"))
 
 IMPORTANT_PATTERNS = [
     r"my name is",
@@ -25,16 +22,11 @@ IMPORTANT_PATTERNS = [
 def is_important(text):
     return any(re.search(p, text.lower()) for p in IMPORTANT_PATTERNS)
 
-def memory_context(user_id):
-    if user_id not in user_memory:
+def memory_context():
+    memory = session.get("memory", [])
+    if not memory:
         return ""
-    return "Important user info:\n" + "\n".join(f"- {m}" for m in user_memory[user_id])
-
-def get_user_id():
-    uid = request.cookies.get("haste_uid")
-    if not uid:
-        uid = str(uuid.uuid4())
-    return uid
+    return "Important user info:\n" + "\n".join(f"- {m}" for m in memory)
 
 @app.route("/")
 def index():
@@ -42,64 +34,63 @@ def index():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    user_id = get_user_id()
     data = request.json
-    user_input = data.get("message", "").strip()
-    student_mode = data.get("student_mode", True)
+    user_input = data.get("message", "")
+    student_mode = data.get("studentMode", True)
 
-    if not user_input:
-        return jsonify({"reply": "Say something."})
+    if "memory" not in session:
+        session["memory"] = []
 
     if is_important(user_input):
-        user_memory.setdefault(user_id, []).append(user_input)
+        session["memory"].append(user_input)
+        session.modified = True
 
-    if student_mode:
-        system_prompt = (
-            "You are Haste, a friendly AI tutor for students.\n"
-            "Explain step-by-step.\n"
-            "Use Hinglish only if helpful.\n"
-            f"{memory_context(user_id)}"
-        )
-    else:
-        system_prompt = (
-            "You are Haste, a professional AI assistant.\n"
-            "Reply in fluent English.\n"
-            f"{memory_context(user_id)}"
-        )
+    tone = (
+        "Use simple Hinglish, student-friendly language."
+        if student_mode else
+        "Use clear, professional English."
+    )
+
+    system_prompt = (
+        "You are Haste, a helpful AI.\n"
+        f"{tone}\n"
+        f"{memory_context()}"
+    )
 
     try:
-        completion = groq_client.chat.completions.create(
+        res = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_input}
             ],
-            temperature=0.5,
-            max_tokens=400
+            max_tokens=700,
+            temperature=0.5
         )
-
-        reply = completion.choices[0].message.content
-        response = make_response(jsonify({"reply": reply}))
-        response.set_cookie("haste_uid", user_id, max_age=31536000)
-        return response
-
-    except Exception:
-        completion = openai_client.chat.completions.create(
+        return jsonify({"reply": res.choices[0].message.content})
+    except:
+        res = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_input}
             ],
-            temperature=0.5,
-            max_tokens=400
+            max_tokens=700,
+            temperature=0.5
         )
+        return jsonify({"reply": res.choices[0].message.content})
 
-        reply = completion.choices[0].message.content
-        response = make_response(jsonify({"reply": reply}))
-        response.set_cookie("haste_uid", user_id, max_age=31536000)
-        return response
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+@app.route("/contact")
+def contact():
+    return render_template("contact.html")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-
+    app.run(debug=True)
