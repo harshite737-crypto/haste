@@ -1,4 +1,4 @@
-let studentMode = true;
+let studentMode = false; // OFF by default
 
 const chat = document.getElementById("chat");
 const input = document.getElementById("user-input");
@@ -6,7 +6,9 @@ const thinking = document.getElementById("thinking");
 const menu = document.getElementById("side-menu");
 
 function toggleMenu() {
-    menu.classList.toggle("open");
+    if (window.innerWidth <= 768) {
+        menu.classList.toggle("open");
+    }
 }
 
 function toggleStudentMode() {
@@ -32,7 +34,7 @@ function sendMessage() {
 
     fetch("/chat", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             message: msg,
             studentMode: studentMode
