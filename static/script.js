@@ -1,69 +1,50 @@
-// GLOBAL STATE
 let studentMode = true;
-let messageCount = 0;
 
-// ELEMENTS
 const chat = document.getElementById("chat");
 const input = document.getElementById("user-input");
 const thinking = document.getElementById("thinking");
-const counter = document.getElementById("message-counter");
+const menu = document.getElementById("side-menu");
 
-// ADD MESSAGE
+function toggleMenu() {
+    menu.classList.toggle("open");
+}
+
+function toggleStudentMode() {
+    studentMode = !studentMode;
+    alert("Student Mode: " + (studentMode ? "ON" : "OFF"));
+}
+
 function addMessage(sender, text) {
     const div = document.createElement("div");
     div.className = sender;
-    div.innerText = sender.toUpperCase() + ": " + text;
+    div.innerText = text;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
 }
 
-// UPDATE COUNTER
-function updateCounter() {
-    messageCount++;
-    counter.innerText = "💬 " + messageCount;
-}
-
-// TOGGLE STUDENT MODE
-function toggleStudentMode() {
-    studentMode = !studentMode;
-    const btn = document.getElementById("student-toggle");
-    btn.innerText = studentMode
-        ? "🎓 Student Mode: ON"
-        : "🌐 Student Mode: OFF";
-}
-
-// SEND MESSAGE
 function sendMessage() {
-    const message = input.value.trim();
-    if (!message) return;
+    const msg = input.value.trim();
+    if (!msg) return;
 
-    addMessage("user", message);
-    updateCounter();
+    addMessage("user", msg);
     input.value = "";
     thinking.style.display = "block";
 
     fetch("/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            message: message,
-            student_mode: studentMode
+            message: msg,
+            studentMode: studentMode
         })
     })
     .then(res => res.json())
     .then(data => {
         thinking.style.display = "none";
         addMessage("haste", data.reply);
-    })
-    .catch(() => {
-        thinking.style.display = "none";
-        addMessage("haste", "Connection error.");
     });
 }
 
-// ENTER KEY SUPPORT
-input.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") {
-        sendMessage();
-    }
+input.addEventListener("keydown", e => {
+    if (e.key === "Enter") sendMessage();
 });
