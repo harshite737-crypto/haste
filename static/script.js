@@ -1,46 +1,56 @@
-let studentMode = false;
-
 const chat = document.getElementById("chat");
-const input = document.getElementById("user-input");
-const thinking = document.getElementById("thinking");
-const video = document.getElementById("generatedVideo");
-const download = document.getElementById("downloadVideo");
+const input = document.getElementById("input");
 
-function toggleStudentMode(){ studentMode = !studentMode; alert("Student Mode: "+(studentMode?"ON":"OFF")); }
-
-function addMessage(sender, text){
+function add(text, cls) {
     const div = document.createElement("div");
-    div.className = sender;
+    div.className = "msg " + cls;
     div.innerText = text;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
 }
 
-function sendMessage(){
+function send() {
     const msg = input.value.trim();
-    if(!msg) return;
-    addMessage("message-user", msg);
-    input.value = "";
-    thinking.style.display = "block";
-    video.style.display = "none";
-    download.style.display = "none";
+    if (!msg) return;
 
-    fetch("/chat",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({message:msg, studentMode:studentMode})
+    add("You: " + msg, "user");
+    input.value = "";
+
+    fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg })
     })
-    .then(res=>res.json())
-    .then(data=>{
-        thinking.style.display="none";
-        addMessage("message-ai", data.reply);
-        if(data.video_url){
-            video.src=data.video_url;
-            video.style.display="block";
-            download.href=data.video_url;
-            download.style.display="block";
+    .then(r => r.json())
+    .then(data => {
+        add(data.reply, "haste");
+
+        if (data.video_prompt) {
+            generateVideo(data.video_prompt);
         }
     });
 }
 
-input.addEventListener("keydown",e=>{if(e.key==="Enter")sendMessage();});
+function generateVideo(prompt) {
+    fetch("/generate-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.video_url) {
+            const video = document.createElement("video");
+            video.src = data.video_url;
+            video.controls = true;
+
+            const link = document.createElement("a");
+            link.href = data.video_url;
+            link.download = "haste-video.mp4";
+            link.innerText = "⬇ Download Video";
+
+            chat.appendChild(video);
+            chat.appendChild(link);
+        }
+    });
+}
