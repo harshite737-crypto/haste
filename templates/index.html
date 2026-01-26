@@ -2,40 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Haste</title>
+    <title>Haste AI</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-
-<!-- SIDEBAR -->
 <aside class="sidebar desktop">
     <div class="sidebar-top">
         <h2>Haste</h2>
-        <button class="new-chat">+ New chat</button>
     </div>
     <div class="sidebar-bottom">
-        <button class="sidebar-btn">Login</button>
         <button class="sidebar-btn" onclick="toggleStudentMode()">Student mode</button>
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
-        <a href="/contact">Contact</a>
     </div>
 </aside>
 
-<!-- MAIN CHAT AREA -->
 <main class="main">
     <div id="chat" class="chat"></div>
-
-    <!-- INPUT BAR -->
     <div class="input-wrapper">
-        <input type="text" id="user-input" placeholder="Message Haste…" autocomplete="off"/>
+        <input id="user-input" placeholder="Message Haste…"/>
         <button onclick="sendMessage()">➤</button>
     </div>
+    <div id="thinking" class="thinking" style="display:none;">Haste is thinking…</div>
 
-    <div id="thinking" class="thinking" style="display:none;">
-        Haste is thinking…
-    </div>
+    <video id="generatedVideo" controls width="320" style="display:none;"></video>
+    <a id="downloadVideo" download="video.mp4" style="display:none;">Download Video</a>
 </main>
 
 <script src="/static/script.js"></script>
