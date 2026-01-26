@@ -9,7 +9,7 @@ import os
 import re
 import random
 import time
-from datetime import date, datetime
+from datetime import datetime
 from dotenv import load_dotenv
 
 # =========================
@@ -22,7 +22,6 @@ load_dotenv()
 # =========================
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
-
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
     "DATABASE_URL", "sqlite:///haste.db"
 )
@@ -47,17 +46,7 @@ replicate_client = replicate.Client(api_token=os.getenv("REPLICATE_API_TOKEN"))
 # =========================
 # OWNER SECRET
 # =========================
-OWNER_SECRET_PHRASE = os.getenv("OWNER_SECRET_PHRASE")  # Enables owner mode
-
-# =========================
-# PLANS
-# =========================
-PLANS = {
-    "free":  {"price": 0,   "messages": 50,  "videos": 1,  "delay": (10, 20)},
-    "sound": {"price": 10,  "messages": 100, "videos": 2,  "delay": (5, 10)},
-    "light": {"price": 50,  "messages": 150, "videos": 10, "delay": (2, 3)},
-    "mind":  {"price": 100, "messages": float("inf"), "videos": float("inf"), "delay": (0, 0)}
-}
+OWNER_SECRET_PHRASE = os.getenv("OWNER_SECRET_PHRASE")  # enables owner mode
 
 # =========================
 # MODELS
@@ -66,7 +55,6 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     username = db.Column(db.String(150))
-    plan = db.Column(db.String(20), default="free")
 
 class VisitLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -104,38 +92,6 @@ def memory_context():
     if not memory:
         return ""
     return "Important user info:\n" + "\n".join(f"- {m}" for m in memory)
-
-# =========================
-# USAGE (MESSAGES/VIDEOS)
-# =========================
-def get_usage():
-    today = str(date.today())
-    if "usage" not in session:
-        session["usage"] = {"date": today, "messages": 0, "videos": 0}
-    usage = session["usage"]
-    if usage["date"] != today:
-        usage["date"] = today
-        usage["messages"] = 0
-        usage["videos"] = 0
-    return usage
-
-def can_generate_video(plan):
-    if session.get("owner"):
-        return True
-    usage = get_usage()
-    if usage["videos"] >= PLANS[plan]["videos"]:
-        return False
-    usage["videos"] += 1
-    session["usage"] = usage
-    return True
-
-def increment_message(plan):
-    if session.get("owner"):
-        return True
-    usage = get_usage()
-    usage["messages"] += 1
-    session["usage"] = usage
-    return usage["messages"] <= PLANS[plan]["messages"]
 
 # =========================
 # ROUTES
@@ -181,22 +137,10 @@ def chat():
         return jsonify(reply="🛡 Owner mode enabled. Everything is free now.")
 
     # -------------------------
-    # PLAN SELECTION
-    # -------------------------
-    if session.get("owner"):
-        plan = "mind"
-    elif current_user.is_authenticated:
-        plan = current_user.plan
-    else:
-        plan = "free"
-
-    # -------------------------
     # VIDEO GENERATION
     # -------------------------
     if msg.lower().startswith("generate video"):
         prompt = msg.replace("generate video", "").strip()
-        if not can_generate_video(plan):
-            return jsonify({"reply": f"🚫 Daily video limit reached ({PLANS[plan]['videos']}/day)"})
         try:
             model = replicate.models.get("luma/reframe-video")
             output = model.predict(
@@ -217,12 +161,6 @@ def chat():
             return jsonify({"reply": "⚠️ Video generation failed"})
 
     # -------------------------
-    # MESSAGE LIMIT
-    # -------------------------
-    if not increment_message(plan):
-        return jsonify(reply=f"🚫 Daily message limit reached ({PLANS[plan]['messages']}/day)")
-
-    # -------------------------
     # MEMORY
     # -------------------------
     if is_important(msg):
@@ -237,13 +175,6 @@ def chat():
         "You are Haste, a fast, precise AI assistant.\n"
         f"{memory_context()}"
     )
-
-    # -------------------------
-    # PLAN DELAY
-    # -------------------------
-    min_d, max_d = PLANS[plan]["delay"]
-    if max_d > 0:
-        time.sleep(random.randint(min_d, max_d))
 
     # -------------------------
     # AI REPLY
@@ -265,8 +196,7 @@ def chat():
         )
         reply = completion.choices[0].message.content
 
-    upgrade_note = "" if plan == "mind" else "\n\n⚡ Upgrade to get faster answers"
-    return jsonify(reply=reply + upgrade_note)
+    return jsonify(reply=reply)
 
 # =========================
 # RUN SERVER
