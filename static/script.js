@@ -1,43 +1,26 @@
-let studentMode = false;
-
-// DOM elements
 const chat = document.getElementById("chat");
 const input = document.getElementById("user-input");
 const thinking = document.getElementById("thinking");
 
-// =====================
-// STUDENT MODE
-// =====================
-function toggleStudentMode() {
-    studentMode = !studentMode;
-    alert("Student Mode: " + (studentMode ? "ON" : "OFF"));
-}
-
-// =====================
-// MESSAGE RENDERING
-// =====================
 function addMessage(sender, text) {
     const wrapper = document.createElement("div");
-    wrapper.className = sender === "user" ? "message-user" : "message-ai";
+    wrapper.className = `message ${sender}`;
 
     const label = document.createElement("div");
     label.className = "message-label";
     label.innerText = sender === "user" ? "You" : "Haste";
 
-    const content = document.createElement("div");
-    content.className = "message-content";
-    content.innerText = text;
+    const bubble = document.createElement("div");
+    bubble.className = "message-bubble";
+    bubble.innerText = text;
 
     wrapper.appendChild(label);
-    wrapper.appendChild(content);
-
+    wrapper.appendChild(bubble);
     chat.appendChild(wrapper);
+
     chat.scrollTop = chat.scrollHeight;
 }
 
-// =====================
-// CHAT
-// =====================
 function sendMessage() {
     const msg = input.value.trim();
     if (!msg) return;
@@ -49,19 +32,19 @@ function sendMessage() {
     fetch("/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            message: msg,
-            studentMode: studentMode
-        })
+        body: JSON.stringify({ message: msg })
     })
     .then(res => res.json())
     .then(data => {
         thinking.style.display = "none";
-        addMessage("haste", data.reply);
+        addMessage("ai", data.reply);
+    })
+    .catch(() => {
+        thinking.style.display = "none";
+        addMessage("ai", "⚠️ Something went wrong.");
     });
 }
 
-// Send on Enter
 input.addEventListener("keydown", e => {
     if (e.key === "Enter") sendMessage();
 });
