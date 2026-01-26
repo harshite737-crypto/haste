@@ -8,65 +8,24 @@
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<aside class="sidebar desktop">
-    <div class="sidebar-top">
-        <h2>Haste</h2>
-        <button class="new-chat" onclick="clearChat()">+ New chat</button>
+    <!-- SIDEBAR -->
+    <div class="sidebar desktop">
+        <h2>⚡ Haste</h2>
+        <button class="sidebar-btn">New Chat</button>
     </div>
 
-    <div class="sidebar-bottom">
-        <div id="auth-buttons">
-            <button class="sidebar-btn" onclick="showLogin()">Login</button>
-            <button class="sidebar-btn" onclick="showRegister()">Register</button>
+    <!-- MAIN -->
+    <div class="main">
+        <!-- CHAT AREA -->
+        <div id="chat" class="chat"></div>
+
+        <!-- INPUT BAR -->
+        <div class="input-wrapper">
+            <input id="user-input" type="text" placeholder="Send a message…" autocomplete="off">
+            <button onclick="sendMessage()">Send</button>
         </div>
-        <button class="sidebar-btn" onclick="toggleStudentMode()">Student mode</button>
-        <button class="sidebar-btn" id="logout-btn" style="display:none;" onclick="logout()">Logout</button>
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
-        <a href="/contact">Contact</a>
-    </div>
-</aside>
-
-<!-- MAIN CHAT AREA -->
-<main class="main">
-    <div id="chat" class="chat"></div>
-
-    <!-- INPUT BAR -->
-    <div class="input-wrapper" id="chat-input" style="display:none;">
-        <input
-            type="text"
-            id="user-input"
-            placeholder="Message Haste…"
-            autocomplete="off"
-        />
-        <button onclick="sendMessage()">➤</button>
     </div>
 
-    <div id="thinking" class="thinking" style="display:none;">
-        Haste is thinking…
-    </div>
-
-    <!-- LOGIN FORM -->
-    <div id="login-form-container" style="display:none;">
-        <h3>Login</h3>
-        <input type="email" id="login-email" placeholder="Email" required>
-        <input type="password" id="login-password" placeholder="Password" required>
-        <button onclick="login()">Login</button>
-        <p>Don't have an account? <a href="#" onclick="showRegister()">Register</a></p>
-    </div>
-
-    <!-- REGISTER FORM -->
-    <div id="register-form-container" style="display:none;">
-        <h3>Register</h3>
-        <input type="text" id="register-username" placeholder="Username" required>
-        <input type="email" id="register-email" placeholder="Email" required>
-        <input type="password" id="register-password" placeholder="Password" required>
-        <button onclick="register()">Register</button>
-        <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
-    </div>
-</main>
-
-<script src="/static/script.js"></script>
+    <script src="/static/script.js"></script>
 </body>
 </html>
