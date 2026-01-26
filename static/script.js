@@ -1,43 +1,80 @@
+let studentMode = false; // OFF by default
 const chat = document.getElementById("chat");
 const input = document.getElementById("user-input");
+const thinking = document.getElementById("thinking");
+const menu = document.getElementById("side-menu");
 
-function addMessage(sender, text) {
-    const msg = document.createElement("div");
-    msg.className = `message ${sender}`;
+function toggleMenu() {
+    if (window.innerWidth <= 768) {
+        menu.classList.toggle("open");
+    }
+}
 
+function toggleStudentMode() {
+    studentMode = !studentMode;
+    alert("Student Mode: " + (studentMode ? "ON" : "OFF"));
+}
+
+function addMessage(sender, text, videoUrl = null) {
+    const container = document.createElement("div");
+    container.className = sender;
+
+    // Name label
     const label = document.createElement("div");
     label.className = "message-label";
     label.innerText = sender === "user" ? "You" : "Haste";
+    container.appendChild(label);
 
-    const bubble = document.createElement("div");
-    bubble.className = "message-bubble";
-    bubble.innerText = text;
+    // Text content
+    if (text) {
+        const content = document.createElement("div");
+        content.className = "message-content";
+        content.innerText = text;
+        container.appendChild(content);
+    }
 
-    msg.appendChild(label);
-    msg.appendChild(bubble);
-    chat.appendChild(msg);
+    // Video content
+    if (videoUrl) {
+        const videoWrapper = document.createElement("div");
+        videoWrapper.className = "video-wrapper";
 
+        const videoEl = document.createElement("video");
+        videoEl.src = videoUrl;
+        videoEl.controls = true;
+        videoEl.width = 400;
+        videoWrapper.appendChild(videoEl);
+
+        const downloadBtn = document.createElement("a");
+        downloadBtn.href = videoUrl;
+        downloadBtn.download = "haste_video.mp4";
+        downloadBtn.innerText = "⬇ Download";
+        downloadBtn.className = "download-btn";
+        videoWrapper.appendChild(downloadBtn);
+
+        container.appendChild(videoWrapper);
+    }
+
+    chat.appendChild(container);
     chat.scrollTop = chat.scrollHeight;
 }
 
 function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
+    const msg = input.value.trim();
+    if (!msg) return;
 
-    addMessage("user", text);
+    addMessage("user", msg);
     input.value = "";
+    thinking.style.display = "block";
 
     fetch("/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text })
+        body: JSON.stringify({ message: msg, studentMode: studentMode })
     })
     .then(res => res.json())
     .then(data => {
-        addMessage("ai", data.reply);
-    })
-    .catch(() => {
-        addMessage("ai", "⚠️ Server error");
+        thinking.style.display = "none";
+        addMessage("haste", data.reply, data.video_url || null);
     });
 }
 
