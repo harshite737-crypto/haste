@@ -12,26 +12,39 @@ import uuid
 from datetime import date, datetime
 from dotenv import load_dotenv
 
+# =========================
+# 🔧 LOAD ENV FIRST
+# =========================
 load_dotenv()
 
+# =========================
+# 🚀 APP INIT
+# =========================
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY")
+app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
+
+# ✅ CONFIG MUST COME BEFORE db = SQLAlchemy
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+    "DATABASE_URL",
+    "sqlite:///haste.db"
+)
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # =========================
-# 🔐 CONFIG
-# =========================
-OWNER_SECRET_PHRASE = os.getenv("OWNER_SECRET_PHRASE")
-UPI_ID = os.getenv("UPI_ID")
-
-# =========================
-# 🔑 EXTENSIONS
+# 🔌 EXTENSIONS
 # =========================
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = None
+login_manager.login_view = None  # no redirects for APIs
+
+# =========================
+# 🔐 CONFIG
+# =========================
+OWNER_SECRET_PHRASE = os.getenv("OWNER_SECRET_PHRASE")
+UPI_ID = os.getenv("UPI_ID", "haste@upi")
 
 # =========================
 # 🧠 API CLIENTS
@@ -59,7 +72,6 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     username = db.Column(db.String(150))
-    password_hash = db.Column(db.String(255))
     plan = db.Column(db.String(20), default="free")
 
 class VisitLog(db.Model):
@@ -100,9 +112,6 @@ def get_usage():
 def index():
     return render_template("index.html")
 
-# -------------------------
-# 🔐 LOGIN (FAKE)
-# -------------------------
 @app.route("/login", methods=["POST"])
 def login():
     email = request.json.get("email")
@@ -123,42 +132,36 @@ def logout():
     return jsonify(success=True)
 
 # -------------------------
-# 💳 CREATE UPI PAYMENT
+# 💳 CREATE FAKE UPI PAYMENT
 # -------------------------
 @app.route("/create-upi-payment", methods=["POST"])
 def create_upi_payment():
-    if not current_user.is_authenticated:
-        return jsonify(error="Login required"), 401
-
     plan = request.json.get("plan")
     if plan not in PLANS or plan == "free":
         return jsonify(error="Invalid plan"), 400
 
     payment_id = str(uuid.uuid4())
 
-    payment = Payment(
+    db.session.add(Payment(
         payment_id=payment_id,
         user_id=current_user.id,
         plan=plan,
         amount=PLANS[plan]["price"]
-    )
-    db.session.add(payment)
+    ))
     db.session.commit()
 
-    return jsonify({
-        "payment_id": payment_id,
-        "upi_id": UPI_ID,
-        "amount": PLANS[plan]["price"],
-        "note": f"HASTE-{plan.upper()}-{payment_id[:6]}"
-    })
+    return jsonify(
+        payment_id=payment_id,
+        upi_id=UPI_ID,
+        amount=PLANS[plan]["price"],
+        note=f"HASTE-{plan.upper()}-{payment_id[:6]}"
+    )
 
-# -------------------------
-# ✅ CONFIRM PAYMENT
-# -------------------------
 @app.route("/confirm-upi-payment", methods=["POST"])
 def confirm_upi_payment():
-    payment_id = request.json.get("payment_id")
-    payment = Payment.query.filter_by(payment_id=payment_id).first()
+    payment = Payment.query.filter_by(
+        payment_id=request.json.get("payment_id")
+    ).first()
 
     if not payment:
         return jsonify(error="Invalid payment"), 400
@@ -166,9 +169,9 @@ def confirm_upi_payment():
     payment.status = "success"
     user = User.query.get(payment.user_id)
     user.plan = payment.plan
-
     db.session.commit()
-    return jsonify(success=True, plan=payment.plan)
+
+    return jsonify(success=True)
 
 # -------------------------
 # 💬 CHAT
@@ -197,7 +200,7 @@ def chat():
     usage = get_usage()
 
     if usage["messages"] >= rules["messages"]:
-        return jsonify(reply="🚫 Message limit reached"), 403
+        return jsonify(reply="🚫 Daily limit reached"), 403
 
     usage["messages"] += 1
     session["usage"] = usage
@@ -231,10 +234,9 @@ def owner():
     ])
 
 # =========================
-# ▶️ RUN
+# ▶️ RUN (LOCAL ONLY)
 # =========================
 if __name__ == "__main__":
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///haste.db"
     with app.app_context():
         db.create_all()
 
