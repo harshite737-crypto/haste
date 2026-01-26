@@ -200,6 +200,26 @@ def chat():
         plan = "free"
 
     # -------------------------
+    # Detect video intent
+    # -------------------------
+    if msg.lower().startswith("generate video"):
+        prompt = msg.replace("generate video", "").strip()
+        if not can_generate_video(plan):
+            return jsonify({"reply": f"🚫 Daily video limit reached ({PLANS[plan]['videos']}/day)"})
+        try:
+            output = replicate_client.run(
+                "luma/reframe-video",
+                input={"prompt": prompt}
+            )
+            return jsonify({
+                "reply": f"🎥 Video generated!",
+                "video_url": output
+            })
+        except Exception as e:
+            print("Video generation error:", e)
+            return jsonify({"reply": "⚠️ Video generation failed"})
+
+    # -------------------------
     # Increment usage
     # -------------------------
     if not increment_message(plan):
@@ -250,36 +270,6 @@ def chat():
 
     upgrade_note = "" if plan == "mind" else "\n\n⚡ Upgrade to get faster answers"
     return jsonify(reply=reply + upgrade_note)
-
-# -------------------------
-# VIDEO GENERATION
-# -------------------------
-@app.route("/generate-video", methods=["POST"])
-def generate_video():
-    prompt = request.json.get("prompt", "").strip()
-    if not prompt:
-        return jsonify({"error": "Prompt required"}), 400
-
-    # Determine plan
-    if session.get("owner"):
-        plan = "mind"
-    elif current_user.is_authenticated:
-        plan = current_user.plan
-    else:
-        plan = "free"
-
-    if not can_generate_video(plan):
-        return jsonify({"error": f"Daily video limit reached ({PLANS[plan]['videos']}/day)"}), 403
-
-    try:
-        output = replicate_client.run(
-            "luma/reframe-video",
-            input={"prompt": prompt}
-        )
-        return jsonify({"type": "video", "url": output})
-    except Exception as e:
-        print("Video error:", e)
-        return jsonify({"error": "Video generation failed"}), 500
 
 # =========================
 # OWNER DASHBOARD
