@@ -8,24 +8,36 @@
 </head>
 <body>
 
-    <!-- SIDEBAR -->
-    <div class="sidebar desktop">
-        <h2>⚡ Haste</h2>
-        <button class="sidebar-btn">New Chat</button>
+<!-- SIDEBAR -->
+<aside class="sidebar desktop">
+    <div class="sidebar-top">
+        <h2>Haste</h2>
+        <button class="new-chat">+ New chat</button>
+    </div>
+    <div class="sidebar-bottom">
+        <button class="sidebar-btn">Login</button>
+        <button class="sidebar-btn" onclick="toggleStudentMode()">Student mode</button>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/contact">Contact</a>
+    </div>
+</aside>
+
+<!-- MAIN CHAT AREA -->
+<main class="main">
+    <div id="chat" class="chat"></div>
+
+    <!-- INPUT BAR -->
+    <div class="input-wrapper">
+        <input type="text" id="user-input" placeholder="Message Haste…" autocomplete="off"/>
+        <button onclick="sendMessage()">➤</button>
     </div>
 
-    <!-- MAIN -->
-    <div class="main">
-        <!-- CHAT AREA -->
-        <div id="chat" class="chat"></div>
-
-        <!-- INPUT BAR -->
-        <div class="input-wrapper">
-            <input id="user-input" type="text" placeholder="Send a message…" autocomplete="off">
-            <button onclick="sendMessage()">Send</button>
-        </div>
+    <div id="thinking" class="thinking" style="display:none;">
+        Haste is thinking…
     </div>
+</main>
 
-    <script src="/static/script.js"></script>
+<script src="/static/script.js"></script>
 </body>
 </html>
