@@ -13,12 +13,12 @@ from datetime import date, datetime
 from dotenv import load_dotenv
 
 # =========================
-# 🔧 LOAD ENV
+# LOAD ENV
 # =========================
 load_dotenv()
 
 # =========================
-# 🚀 APP INIT
+# APP INIT
 # =========================
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
@@ -29,7 +29,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # =========================
-# 🔌 EXTENSIONS
+# EXTENSIONS
 # =========================
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -38,19 +38,19 @@ login_manager.init_app(app)
 login_manager.login_view = None
 
 # =========================
-# 🔑 API CLIENTS
+# API CLIENTS
 # =========================
 groq_client = Groq(api_key=os.getenv("YOUR_GROQ_API_KEY"))
 openai_client = OpenAI(api_key=os.getenv("YOUR_OpenAI_API_KEY"))
 replicate_client = replicate.Client(api_token=os.getenv("REPLICATE_API_TOKEN"))
 
 # =========================
-# 👤 OWNER SECRET
+# OWNER SECRET
 # =========================
-OWNER_SECRET_PHRASE = os.getenv("OWNER_SECRET_PHRASE")  # enables owner mode
+OWNER_SECRET_PHRASE = os.getenv("OWNER_SECRET_PHRASE")  # Enables owner mode
 
 # =========================
-# 📊 PLANS
+# PLANS
 # =========================
 PLANS = {
     "free":  {"price": 0,   "messages": 50,  "videos": 1,  "delay": (10, 20)},
@@ -60,7 +60,7 @@ PLANS = {
 }
 
 # =========================
-# 👤 MODELS
+# MODELS
 # =========================
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -79,7 +79,7 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # =========================
-# 🧠 MEMORY
+# MEMORY
 # =========================
 IMPORTANT_PATTERNS = [
     r"my name is",
@@ -106,7 +106,7 @@ def memory_context():
     return "Important user info:\n" + "\n".join(f"- {m}" for m in memory)
 
 # =========================
-# 🧮 USAGE (MESSAGES/VIDEOS)
+# USAGE (MESSAGES/VIDEOS)
 # =========================
 def get_usage():
     today = str(date.today())
@@ -138,7 +138,7 @@ def increment_message(plan):
     return usage["messages"] <= PLANS[plan]["messages"]
 
 # =========================
-# 🌐 ROUTES
+# ROUTES
 # =========================
 @app.route("/")
 def index():
@@ -174,14 +174,14 @@ def chat():
         return jsonify(reply="Say something.")
 
     # -------------------------
-    # OWNER MODE
+    # OWNER MODE ACTIVATION
     # -------------------------
-    if msg == OWNER_SECRET_PHRASE:
+    if OWNER_SECRET_PHRASE and msg.strip().lower() == OWNER_SECRET_PHRASE.strip().lower():
         session["owner"] = True
         return jsonify(reply="🛡 Owner mode enabled. Everything is free now.")
 
     # -------------------------
-    # Determine plan
+    # PLAN SELECTION
     # -------------------------
     if session.get("owner"):
         plan = "mind"
@@ -191,21 +191,20 @@ def chat():
         plan = "free"
 
     # -------------------------
-    # Detect video intent
+    # VIDEO GENERATION
     # -------------------------
     if msg.lower().startswith("generate video"):
         prompt = msg.replace("generate video", "").strip()
         if not can_generate_video(plan):
             return jsonify({"reply": f"🚫 Daily video limit reached ({PLANS[plan]['videos']}/day)"})
         try:
-            # Correct Replicate call
             model = replicate.models.get("luma/reframe-video")
             output = model.predict(
                 prompt=prompt,
                 width=512,
                 height=512,
                 fps=15,
-                num_frames=20  # keep short for testing
+                num_frames=20
             )
             if isinstance(output, list):
                 output = output[-1]
@@ -218,13 +217,13 @@ def chat():
             return jsonify({"reply": "⚠️ Video generation failed"})
 
     # -------------------------
-    # Increment message usage
+    # MESSAGE LIMIT
     # -------------------------
     if not increment_message(plan):
         return jsonify(reply=f"🚫 Daily message limit reached ({PLANS[plan]['messages']}/day)")
 
     # -------------------------
-    # Save memory
+    # MEMORY
     # -------------------------
     if is_important(msg):
         mem = get_memory()
@@ -232,7 +231,7 @@ def chat():
         session["memory"] = mem
 
     # -------------------------
-    # System prompt
+    # SYSTEM PROMPT
     # -------------------------
     system_prompt = (
         "You are Haste, a fast, precise AI assistant.\n"
@@ -240,14 +239,14 @@ def chat():
     )
 
     # -------------------------
-    # Delay based on plan
+    # PLAN DELAY
     # -------------------------
     min_d, max_d = PLANS[plan]["delay"]
     if max_d > 0:
         time.sleep(random.randint(min_d, max_d))
 
     # -------------------------
-    # Generate AI reply
+    # AI REPLY
     # -------------------------
     try:
         completion = groq_client.chat.completions.create(
