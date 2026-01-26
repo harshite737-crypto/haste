@@ -1,32 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>Haste AI</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haste</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<aside class="sidebar desktop">
-    <div class="sidebar-top">
-        <h2>Haste</h2>
-    </div>
-    <div class="sidebar-bottom">
-        <button class="sidebar-btn" onclick="toggleStudentMode()">Student mode</button>
-    </div>
-</aside>
 
-<main class="main">
-    <div id="chat" class="chat"></div>
-    <div class="input-wrapper">
-        <input id="user-input" placeholder="Message Haste…"/>
-        <button onclick="sendMessage()">➤</button>
-    </div>
-    <div id="thinking" class="thinking" style="display:none;">Haste is thinking…</div>
+<div class="chat-container">
+    <h1>Haste</h1>
 
-    <video id="generatedVideo" controls width="320" style="display:none;"></video>
-    <a id="downloadVideo" download="video.mp4" style="display:none;">Download Video</a>
-</main>
+    <div id="chat"></div>
+
+    <div class="input-box">
+        <input id="input" placeholder="Type a message or: generate video a cat" />
+        <button onclick="send()">Send</button>
+    </div>
+</div>
 
 <script src="/static/script.js"></script>
 </body>
