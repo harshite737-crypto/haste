@@ -174,7 +174,7 @@ def chat():
         return jsonify(reply="Say something.")
 
     # -------------------------
-    # OWNER MODE (WORKS EVEN WITHOUT LOGIN)
+    # OWNER MODE
     # -------------------------
     if msg == OWNER_SECRET_PHRASE:
         session["owner"] = True
@@ -198,11 +198,15 @@ def chat():
         if not can_generate_video(plan):
             return jsonify({"reply": f"🚫 Daily video limit reached ({PLANS[plan]['videos']}/day)"})
         try:
-            output = replicate_client.run(
-                "luma/reframe-video",
-                input={"prompt": prompt}
+            # Correct Replicate call
+            model = replicate.models.get("luma/reframe-video")
+            output = model.predict(
+                prompt=prompt,
+                width=512,
+                height=512,
+                fps=15,
+                num_frames=20  # keep short for testing
             )
-            # Some outputs return list
             if isinstance(output, list):
                 output = output[-1]
             return jsonify({
