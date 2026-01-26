@@ -7,7 +7,6 @@ from openai import OpenAI
 import replicate
 import os
 import re
-import random
 import time
 from datetime import datetime
 from dotenv import load_dotenv
@@ -55,12 +54,6 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     username = db.Column(db.String(150))
-
-class VisitLog(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    ip = db.Column(db.String(100))
-    message = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -121,7 +114,7 @@ def logout():
     return jsonify(success=True)
 
 # -------------------------
-# CHAT
+# CHAT + VIDEO
 # -------------------------
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -143,22 +136,19 @@ def chat():
         prompt = msg.replace("generate video", "").strip()
         try:
             model = replicate.models.get("luma/reframe-video")
-            output = model.predict(
-                prompt=prompt,
-                width=512,
-                height=512,
-                fps=15,
-                num_frames=20
+            version = model.versions.list()[0]
+            output = replicate.run(
+                version=version.id,
+                input={"prompt": prompt}
             )
-            if isinstance(output, list):
-                output = output[-1]
+            video_url = output if isinstance(output, str) else output[-1]
             return jsonify({
-                "reply": "🎥 Video generated!",
-                "video_url": output
+                "reply": "🎥 Video generated! Click to play or download below.",
+                "video_url": video_url
             })
         except Exception as e:
             print("Video generation error:", e)
-            return jsonify({"reply": "⚠️ Video generation failed"})
+            return jsonify({"reply": "⚠️ Video generation failed. Check your Replicate API key!"})
 
     # -------------------------
     # MEMORY
