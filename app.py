@@ -6,14 +6,15 @@ from groq import Groq
 from openai import OpenAI
 import replicate
 import os
-import time
-import random
+import re
 import uuid
+import random
+import time
 from datetime import date, datetime
 from dotenv import load_dotenv
 
 # =========================
-# 🔧 LOAD ENV FIRST
+# 🔧 LOAD ENV
 # =========================
 load_dotenv()
 
@@ -23,7 +24,6 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
 
-# ✅ CONFIG MUST COME BEFORE db = SQLAlchemy
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
     "DATABASE_URL",
     "sqlite:///haste.db"
@@ -35,25 +35,22 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # =========================
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
-
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = None  # no redirects for APIs
+login_manager.login_view = None
+
+# =========================
+# 🔑 API CLIENTS
+# =========================
+groq_client = Groq(api_key=os.getenv("YOUR_GROQ_API_KEY"))
+openai_client = OpenAI(api_key=os.getenv("YOUR_OpenAI_API_KEY"))
+replicate_client = replicate.Client(api_token=os.getenv("REPLICATE_API_TOKEN"))
 
 # =========================
 # 🔐 CONFIG
 # =========================
 OWNER_SECRET_PHRASE = os.getenv("OWNER_SECRET_PHRASE")
 UPI_ID = os.getenv("UPI_ID", "haste@upi")
-
-# =========================
-# 🧠 API CLIENTS
-# =========================
-groq_client = Groq(api_key=os.getenv("YOUR_GROQ_API_KEY"))
-openai_client = OpenAI(api_key=os.getenv("YOUR_OpenAI_API_KEY"))
-replicate_client = replicate.Client(
-    api_token=os.getenv("REPLICATE_API_TOKEN")
-)
 
 # =========================
 # 📊 PLANS
@@ -94,16 +91,60 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # =========================
-# 🧮 USAGE
+# 🧠 MEMORY
+# =========================
+IMPORTANT_PATTERNS = [
+    r"my name is",
+    r"remember",
+    r"i like",
+    r"i am",
+    r"call me",
+    r"my age is",
+    r"i live in"
+]
+
+def is_important(text):
+    return any(re.search(p, text.lower()) for p in IMPORTANT_PATTERNS)
+
+def get_memory():
+    if "memory" not in session:
+        session["memory"] = []
+    return session["memory"]
+
+def memory_context():
+    memory = get_memory()
+    if not memory:
+        return ""
+    return "Important user info:\n" + "\n".join(f"- {m}" for m in memory)
+
+# =========================
+# 🧮 USAGE (MESSAGES/VIDEOS)
 # =========================
 def get_usage():
     today = str(date.today())
-    session.setdefault("usage", {"date": today, "messages": 0, "videos": 0})
-
-    if session["usage"]["date"] != today:
+    if "usage" not in session:
         session["usage"] = {"date": today, "messages": 0, "videos": 0}
 
-    return session["usage"]
+    usage = session["usage"]
+    if usage["date"] != today:
+        usage["date"] = today
+        usage["messages"] = 0
+        usage["videos"] = 0
+    return usage
+
+def can_generate_video(plan):
+    usage = get_usage()
+    if usage["videos"] >= PLANS[plan]["videos"]:
+        return False
+    usage["videos"] += 1
+    session["usage"] = usage
+    return True
+
+def increment_message(plan):
+    usage = get_usage()
+    usage["messages"] += 1
+    session["usage"] = usage
+    return usage["messages"] <= PLANS[plan]["messages"]
 
 # =========================
 # 🌐 ROUTES
@@ -112,16 +153,17 @@ def get_usage():
 def index():
     return render_template("index.html")
 
+# -------------------------
+# LOGIN
+# -------------------------
 @app.route("/login", methods=["POST"])
 def login():
     email = request.json.get("email")
     user = User.query.filter_by(email=email).first()
-
     if not user:
         user = User(email=email, username="User")
         db.session.add(user)
         db.session.commit()
-
     login_user(user)
     return jsonify(success=True)
 
@@ -132,112 +174,127 @@ def logout():
     return jsonify(success=True)
 
 # -------------------------
-# 💳 CREATE FAKE UPI PAYMENT
-# -------------------------
-@app.route("/create-upi-payment", methods=["POST"])
-def create_upi_payment():
-    plan = request.json.get("plan")
-    if plan not in PLANS or plan == "free":
-        return jsonify(error="Invalid plan"), 400
-
-    payment_id = str(uuid.uuid4())
-
-    db.session.add(Payment(
-        payment_id=payment_id,
-        user_id=current_user.id,
-        plan=plan,
-        amount=PLANS[plan]["price"]
-    ))
-    db.session.commit()
-
-    return jsonify(
-        payment_id=payment_id,
-        upi_id=UPI_ID,
-        amount=PLANS[plan]["price"],
-        note=f"HASTE-{plan.upper()}-{payment_id[:6]}"
-    )
-
-@app.route("/confirm-upi-payment", methods=["POST"])
-def confirm_upi_payment():
-    payment = Payment.query.filter_by(
-        payment_id=request.json.get("payment_id")
-    ).first()
-
-    if not payment:
-        return jsonify(error="Invalid payment"), 400
-
-    payment.status = "success"
-    user = User.query.get(payment.user_id)
-    user.plan = payment.plan
-    db.session.commit()
-
-    return jsonify(success=True)
-
-# -------------------------
-# 💬 CHAT
+# CHAT
 # -------------------------
 @app.route("/chat", methods=["POST"])
 def chat():
-    if not current_user.is_authenticated:
-        return jsonify(reply="❌ Please login"), 401
-
     msg = request.json.get("message", "").strip()
     if not msg:
         return jsonify(reply="Say something.")
 
-    # OWNER MODE
+    # -------------------------
+    # OWNER MODE (WORKS EVEN WITHOUT LOGIN)
+    # -------------------------
     if msg == OWNER_SECRET_PHRASE:
         session["owner"] = True
-        current_user.plan = "mind"
-        db.session.commit()
-        return jsonify(reply="🛡 Owner mode enabled.")
+        return jsonify(reply="🛡 Owner mode enabled. Everything is free now.")
 
-    db.session.add(VisitLog(ip=request.remote_addr, message=msg))
-    db.session.commit()
+    # -------------------------
+    # Determine plan
+    # -------------------------
+    if session.get("owner"):
+        plan = "mind"
+    elif current_user.is_authenticated:
+        plan = current_user.plan
+    else:
+        plan = "free"
 
-    plan = "mind" if session.get("owner") else current_user.plan
-    rules = PLANS[plan]
-    usage = get_usage()
+    # -------------------------
+    # Increment usage
+    # -------------------------
+    if not increment_message(plan):
+        return jsonify(reply=f"🚫 Daily message limit reached ({PLANS[plan]['messages']}/day)")
 
-    if usage["messages"] >= rules["messages"]:
-        return jsonify(reply="🚫 Daily limit reached"), 403
+    # -------------------------
+    # Save memory
+    # -------------------------
+    if is_important(msg):
+        mem = get_memory()
+        mem.append(msg)
+        session["memory"] = mem
 
-    usage["messages"] += 1
-    session["usage"] = usage
+    # -------------------------
+    # System prompt
+    # -------------------------
+    system_prompt = (
+        "You are Haste, a fast, precise AI assistant.\n"
+        f"{memory_context()}"
+    )
 
-    min_d, max_d = rules["delay"]
+    # -------------------------
+    # Delay based on plan
+    # -------------------------
+    min_d, max_d = PLANS[plan]["delay"]
     if max_d > 0:
         time.sleep(random.randint(min_d, max_d))
 
+    # -------------------------
+    # Completion
+    # -------------------------
+    try:
+        completion = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": msg}],
+            temperature=0.5,
+            max_tokens=400
+        )
+        reply = completion.choices[0].message.content
+    except Exception:
+        completion = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": msg}],
+            temperature=0.5,
+            max_tokens=400
+        )
+        reply = completion.choices[0].message.content
+
     upgrade_note = "" if plan == "mind" else "\n\n⚡ Upgrade to get faster answers"
-
-    completion = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": msg}],
-        max_tokens=400
-    )
-
-    return jsonify(reply=completion.choices[0].message.content + upgrade_note)
+    return jsonify(reply=reply + upgrade_note)
 
 # -------------------------
-# 👑 OWNER DASHBOARD
+# VIDEO GENERATION
 # -------------------------
+@app.route("/generate-video", methods=["POST"])
+def generate_video():
+    prompt = request.json.get("prompt", "").strip()
+    if not prompt:
+        return jsonify({"error": "Prompt required"}), 400
+
+    # Determine plan
+    if session.get("owner"):
+        plan = "mind"
+    elif current_user.is_authenticated:
+        plan = current_user.plan
+    else:
+        plan = "free"
+
+    if not can_generate_video(plan):
+        return jsonify({"error": f"Daily video limit reached ({PLANS[plan]['videos']}/day)"}), 403
+
+    try:
+        output = replicate_client.run(
+            "luma/reframe-video",
+            input={"prompt": prompt}
+        )
+        return jsonify({"type": "video", "url": output})
+    except Exception as e:
+        print("Video error:", e)
+        return jsonify({"error": "Video generation failed"}), 500
+
+# =========================
+# OWNER DASHBOARD
+# =========================
 @app.route("/owner")
 def owner():
     if not session.get("owner"):
         return "Forbidden", 403
-
     logs = VisitLog.query.order_by(VisitLog.timestamp.desc()).all()
-    return jsonify([
-        {"ip": l.ip, "message": l.message, "time": l.timestamp.isoformat()}
-        for l in logs
-    ])
+    return jsonify([{"ip": l.ip, "message": l.message, "time": l.timestamp.isoformat()} for l in logs])
 
 # =========================
-# ▶️ RUN (LOCAL ONLY)
+# RUN
 # =========================
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
