@@ -1,10 +1,9 @@
 const chat = document.getElementById("chat");
 const input = document.getElementById("user-input");
-const thinking = document.getElementById("thinking");
 
 function addMessage(sender, text) {
-    const wrapper = document.createElement("div");
-    wrapper.className = `message ${sender}`;
+    const msg = document.createElement("div");
+    msg.className = `message ${sender}`;
 
     const label = document.createElement("div");
     label.className = "message-label";
@@ -14,34 +13,31 @@ function addMessage(sender, text) {
     bubble.className = "message-bubble";
     bubble.innerText = text;
 
-    wrapper.appendChild(label);
-    wrapper.appendChild(bubble);
-    chat.appendChild(wrapper);
+    msg.appendChild(label);
+    msg.appendChild(bubble);
+    chat.appendChild(msg);
 
     chat.scrollTop = chat.scrollHeight;
 }
 
 function sendMessage() {
-    const msg = input.value.trim();
-    if (!msg) return;
+    const text = input.value.trim();
+    if (!text) return;
 
-    addMessage("user", msg);
+    addMessage("user", text);
     input.value = "";
-    thinking.style.display = "block";
 
     fetch("/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg })
+        body: JSON.stringify({ message: text })
     })
     .then(res => res.json())
     .then(data => {
-        thinking.style.display = "none";
         addMessage("ai", data.reply);
     })
     .catch(() => {
-        thinking.style.display = "none";
-        addMessage("ai", "⚠️ Something went wrong.");
+        addMessage("ai", "⚠️ Server error");
     });
 }
 
