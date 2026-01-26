@@ -7,7 +7,6 @@ from openai import OpenAI
 import replicate
 import os
 import re
-import uuid
 import random
 import time
 from datetime import date, datetime
@@ -25,8 +24,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
 
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///haste.db"
+    "DATABASE_URL", "sqlite:///haste.db"
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -47,10 +45,9 @@ openai_client = OpenAI(api_key=os.getenv("YOUR_OpenAI_API_KEY"))
 replicate_client = replicate.Client(api_token=os.getenv("REPLICATE_API_TOKEN"))
 
 # =========================
-# 🔐 CONFIG
+# 👤 OWNER SECRET
 # =========================
-OWNER_SECRET_PHRASE = os.getenv("OWNER_SECRET_PHRASE")
-UPI_ID = os.getenv("UPI_ID", "haste@upi")
+OWNER_SECRET_PHRASE = os.getenv("OWNER_SECRET_PHRASE")  # enables owner mode
 
 # =========================
 # 📊 PLANS
@@ -76,15 +73,6 @@ class VisitLog(db.Model):
     ip = db.Column(db.String(100))
     message = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-
-class Payment(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    payment_id = db.Column(db.String(100), unique=True)
-    user_id = db.Column(db.Integer)
-    plan = db.Column(db.String(20))
-    amount = db.Column(db.Integer)
-    status = db.Column(db.String(20), default="pending")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -124,7 +112,6 @@ def get_usage():
     today = str(date.today())
     if "usage" not in session:
         session["usage"] = {"date": today, "messages": 0, "videos": 0}
-
     usage = session["usage"]
     if usage["date"] != today:
         usage["date"] = today
@@ -133,6 +120,8 @@ def get_usage():
     return usage
 
 def can_generate_video(plan):
+    if session.get("owner"):
+        return True
     usage = get_usage()
     if usage["videos"] >= PLANS[plan]["videos"]:
         return False
@@ -141,6 +130,8 @@ def can_generate_video(plan):
     return True
 
 def increment_message(plan):
+    if session.get("owner"):
+        return True
     usage = get_usage()
     usage["messages"] += 1
     session["usage"] = usage
@@ -211,8 +202,11 @@ def chat():
                 "luma/reframe-video",
                 input={"prompt": prompt}
             )
+            # Some outputs return list
+            if isinstance(output, list):
+                output = output[-1]
             return jsonify({
-                "reply": f"🎥 Video generated!",
+                "reply": "🎥 Video generated!",
                 "video_url": output
             })
         except Exception as e:
@@ -220,7 +214,7 @@ def chat():
             return jsonify({"reply": "⚠️ Video generation failed"})
 
     # -------------------------
-    # Increment usage
+    # Increment message usage
     # -------------------------
     if not increment_message(plan):
         return jsonify(reply=f"🚫 Daily message limit reached ({PLANS[plan]['messages']}/day)")
@@ -249,7 +243,7 @@ def chat():
         time.sleep(random.randint(min_d, max_d))
 
     # -------------------------
-    # Completion
+    # Generate AI reply
     # -------------------------
     try:
         completion = groq_client.chat.completions.create(
@@ -272,19 +266,10 @@ def chat():
     return jsonify(reply=reply + upgrade_note)
 
 # =========================
-# OWNER DASHBOARD
-# =========================
-@app.route("/owner")
-def owner():
-    if not session.get("owner"):
-        return "Forbidden", 403
-    logs = VisitLog.query.order_by(VisitLog.timestamp.desc()).all()
-    return jsonify([{"ip": l.ip, "message": l.message, "time": l.timestamp.isoformat()} for l in logs])
-
-# =========================
-# RUN
+# RUN SERVER
 # =========================
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
