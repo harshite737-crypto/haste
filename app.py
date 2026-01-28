@@ -9,12 +9,7 @@ import os
 import re
 import time
 from datetime import datetime
-from dotenv import load_dotenv
 
-# =========================
-# LOAD ENV
-# =========================
-load_dotenv()
 
 # =========================
 # APP INIT
@@ -196,3 +191,4 @@ if __name__ == "__main__":
         db.create_all()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
