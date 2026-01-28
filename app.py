@@ -4,10 +4,11 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from groq import Groq
 from openai import OpenAI
-import replicate
 import os
 import re
 import time
+import uuid
+import requests
 from datetime import datetime
 
 
@@ -35,12 +36,21 @@ login_manager.login_view = None
 # =========================
 groq_client = Groq(api_key=os.getenv("YOUR_GROQ_API_KEY"))
 openai_client = OpenAI(api_key=os.getenv("YOUR_OpenAI_API_KEY"))
-replicate_client = replicate.Client(api_token=os.getenv("REPLICATE_API_TOKEN"))
+
+# =========================
+# HUGGING FACE (NEW)
+# =========================
+HF_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
+HF_MODEL_URL = "https://api-inference.huggingface.co/models/HiDream-ai/HiDream-l1"
+
+HF_HEADERS = {
+    "Authorization": f"Bearer {HF_TOKEN}"
+}
 
 # =========================
 # OWNER SECRET
 # =========================
-OWNER_SECRET_PHRASE = os.getenv("OWNER_SECRET_PHRASE")  # enables owner mode
+OWNER_SECRET_PHRASE = os.getenv("OWNER_SECRET_PHRASE")
 
 # =========================
 # MODELS
@@ -109,7 +119,7 @@ def logout():
     return jsonify(success=True)
 
 # -------------------------
-# CHAT + VIDEO
+# CHAT + VIDEO + IMAGE
 # -------------------------
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -118,32 +128,50 @@ def chat():
         return jsonify(reply="Say something.")
 
     # -------------------------
-    # OWNER MODE ACTIVATION
+    # OWNER MODE
     # -------------------------
-    if OWNER_SECRET_PHRASE and msg.strip().lower() == OWNER_SECRET_PHRASE.strip().lower():
+    if OWNER_SECRET_PHRASE and msg.lower() == OWNER_SECRET_PHRASE.lower():
         session["owner"] = True
-        return jsonify(reply="🛡 Owner mode enabled. Everything is free now.")
+        return jsonify(reply="🛡 Owner mode enabled.")
 
     # -------------------------
-    # VIDEO GENERATION
+    # IMAGE GENERATION (NEW)
     # -------------------------
-    if msg.lower().startswith("generate video"):
-        prompt = msg.replace("generate video", "").strip()
+    if msg.lower().startswith("generate image"):
+        prompt = msg.replace("generate image", "").strip()
+
         try:
-            model = replicate.models.get("luma/reframe-video")
-            version = model.versions.list()[0]
-            output = replicate.run(
-                version=version.id,
-                input={"prompt": prompt}
+            payload = {
+                "inputs": prompt,
+                "options": {"wait_for_model": True}
+            }
+
+            r = requests.post(
+                HF_MODEL_URL,
+                headers=HF_HEADERS,
+                json=payload,
+                timeout=180
             )
-            video_url = output if isinstance(output, str) else output[-1]
-            return jsonify({
-                "reply": "🎥 Video generated! Click to play or download below.",
-                "video_url": video_url
-            })
+
+            if r.status_code != 200:
+                return jsonify(reply="⚠️ Image generation failed.")
+
+            filename = f"image_{uuid.uuid4().hex}.png"
+            path = os.path.join("static", filename)
+
+            with open(path, "wb") as f:
+                f.write(r.content)
+
+            return jsonify(
+                reply="🖼️ Image generated!",
+                image_url=f"/static/{filename}"
+            )
+
         except Exception as e:
-            print("Video generation error:", e)
-            return jsonify({"reply": "⚠️ Video generation failed. Check your Replicate API key!"})
+            print("Image generation error:", e)
+            return jsonify(reply="⚠️ Image generation error.")
+
+   
 
     # -------------------------
     # MEMORY
@@ -153,17 +181,11 @@ def chat():
         mem.append(msg)
         session["memory"] = mem
 
-    # -------------------------
-    # SYSTEM PROMPT
-    # -------------------------
     system_prompt = (
         "You are Haste, a fast, precise AI assistant.\n"
         f"{memory_context()}"
     )
 
-    # -------------------------
-    # AI REPLY
-    # -------------------------
     try:
         completion = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -191,4 +213,3 @@ if __name__ == "__main__":
         db.create_all()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
