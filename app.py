@@ -4,13 +4,19 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from groq import Groq
 from openai import OpenAI
+import replicate
 import os
 import re
 import time
 import uuid
 import requests
 from datetime import datetime
+from dotenv import load_dotenv
 
+# =========================
+# LOAD ENV
+# =========================
+load_dotenv()
 
 # =========================
 # APP INIT
@@ -36,6 +42,7 @@ login_manager.login_view = None
 # =========================
 groq_client = Groq(api_key=os.getenv("YOUR_GROQ_API_KEY"))
 openai_client = OpenAI(api_key=os.getenv("YOUR_OpenAI_API_KEY"))
+replicate_client = replicate.Client(api_token=os.getenv("REPLICATE_API_TOKEN"))
 
 # =========================
 # HUGGING FACE (NEW)
@@ -171,7 +178,26 @@ def chat():
             print("Image generation error:", e)
             return jsonify(reply="⚠️ Image generation error.")
 
-   
+    # -------------------------
+    # VIDEO GENERATION (UNCHANGED)
+    # -------------------------
+    if msg.lower().startswith("generate video"):
+        prompt = msg.replace("generate video", "").strip()
+        try:
+            model = replicate.models.get("luma/reframe-video")
+            version = model.versions.list()[0]
+            output = replicate.run(
+                version=version.id,
+                input={"prompt": prompt}
+            )
+            video_url = output if isinstance(output, str) else output[-1]
+            return jsonify(
+                reply="🎥 Video generated!",
+                video_url=video_url
+            )
+        except Exception as e:
+            print("Video generation error:", e)
+            return jsonify(reply="⚠️ Video generation failed.")
 
     # -------------------------
     # MEMORY
